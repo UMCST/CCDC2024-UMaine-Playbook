@@ -113,24 +113,105 @@ Set-ExecutionPolicy Restricted -Scope Process -Force
 
 If you are not on a domain controller, you may want to install AD Powershell tools
 ```
-
+Get-WindowsCapability -Name Rsat.ActiveDirectory* -Online | 
+Add-WindowsCapability -Online
+```
+Also, if you have a GUI install group policy tools
+```
+Get-WindowsCapability -Name Rsat.GroupPolicy* -Online | 
+Add-WindowsCapability -Online
 ```
 
+Enable Security Services / anti virus
+```
+Get-MPComputerStatus
+```
+If it is disabled, enable it: 
+```
+Set-MpPreference -DisableRealtimeMonitoring $False
+```
+Backup Important Data
+	- DNS
+```
+Export-DNSSeverZone -Name <Zone Name> -FileName <Backup FileName>
+```
+The backup file can be found in C:\Windows\System32\dns
 
+- DNS
+- SMB: Use the > gsmbs command to see what shares are there. Any important content on non-default shares should be zipped and copied elsewhere
+
+Firewall Time
+- Enable the firewall
+```
+Set-NetFirewallProfile -Profile Domain -Enabled True
+```
+- Set the firewall to block outbound traffic be default, and log
+```
+Set-NetFirewallProfile -DefaultOutboundAction Block 
+-LogBlocked True
+```
+- Create rules allowing outbound traffic for essential applications
+```
+New-NetFirewallRule -name “<NAME>” -DisplayName “<NAME>” -action Allow -Direction Outbound -program “<PATH>”
+```
+- For example, to use chromium you can use the following rule:
+```
+$p = get-command chrome
+```
+```
+New-NetFirewallRule -name “chome_out” -DisplayName “Allow Chrome” -action Allow -Direction Outbound -program $p.source
+```
+- For Chocolatey, you can allow traffic to the IP address of the API endpoint (chocolatey.org)
+```
+ping chocolatey.org # get the ip address
+```
+```
+New-NetFirewallRule -Name “choco_out” -DisplayName “Allow Chocolatey” -Direction Outbound -RemoteAddress <choco ip address>
+```
+- For SSH
+```
+New-NetFirewallRule -name “ssh_out” -DisplayName “Allow SSH” -action Allow -Direction Outbound -program (get-command ssh).Source
+```
+- For winlogbeat
+```
+$p = C:\ProgramData\chocolatey\bin\winlogbeat.exe
+```
+```
+New-NetFirewallRule -name “winlogbeat_out” -DisplayName “Allow Winlogbeat” -action Allow -Direction Outbound -program $p
+```
+Some Basic Forensics
+- Look at scheduled tasks
+- Check services
+- Check open ports
+
+# Repeat Forensics
+If you have a chance later, run through these basic checks of your server’s security at later points in the competition. Especially important on the DC.
+
+Enable Security Services / anti virus
+```
+Get-MPComputerStatus
+```
+If it is disabled, enable it:
+```
+Set-MpPreference -DisableRealtimeMonitoring $False
 ```
 
+Audit Accounts
+Check who is a member of important builtin groups
 ```
+Get-ADGroupMember “<group name>”
+```
+- Domain Admins
+- Schema Admins
+- Enterprise Admins
+- Administrators
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+Double Check Your Firewall
+```
+Get-NetFirewallProfile | select 
+Name,Enabled,DefaultOutboundAction,LogBlocked
+```
+```
+cat -tail 25 C:\Windows\System32\LogFiles\Firewall\pfirewall.log
+```
+Are there any weird blocked connections in the log?
