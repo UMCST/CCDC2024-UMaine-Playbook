@@ -1,0 +1,62 @@
+#!/usr/bin/nft -f
+flush ruleset;
+table inet filter {
+	chain input {
+    		type filter hook input priority 0; policy drop;
+    		iifname "lo" accept;
+
+    		ct state { established, related } accept;
+    		ct state invalid drop;
+#allow ping
+                        ip protocol icmp accept;
+		ip6 nexthdr icmpv6 accept
+
+    		#to allow incoming ports for services you are running
+		# do not add port 22 if configuring for workstations
+    		tcp dport { 22 } limit rate 15/minute log prefix “new_ssh”
+ 		flags all accept;
+		# add required ports for services 
+    		tcp dport { 5901 } accept; #example for web server
+	}
+    
+	chain output {
+    		type filter hook output priority 0; policy drop;
+    		oifname "lo" accept;
+   	 
+    		ct state invalid drop;
+    		ct state { established, related } accept;
+
+    		#allow ping
+    		ip protocol icmp accept;
+		ip6 nexthdr icmpv6 accept;
+
+		# Assumes your firewall group is called “fw_out”. Replace
+with a different
+		# name as needed. Comment line out for workstations 
+    		skgid fw_out jump allowed_output;
+# Rule enforces outbound rules specified in the allowed_output chain for any service running as that user
+skuid <User you are using> jump allowed_output;
+		skuid wazuh jump allowed_output;
+
+		# uncomment and add your DNS servers if you have resolution
+ 		problems
+		# necessary if using systemd-resolved
+    		ip daddr { 1.1.1.1, 8.8.8.8 } accept;
+    		log prefix “dropped_output” flags all;
+		udp dport { 53 } accept;
+		tcp dport { 53 } accept;
+	}
+
+	chain allowed_output {
+		log prefix “allowed_output” flags all;
+    		udp dport { 53 } accept;
+    		tcp dport { 22, 53, 80, 443, 8080, 1514, 1515 accept;
+    		drop;
+	}
+
+	chain forward {
+		# needs to be accept for docker to work
+    		type filter hook forward priority 0; policy accept;
+	}
+}
+
