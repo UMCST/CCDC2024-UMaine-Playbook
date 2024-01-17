@@ -1,0 +1,70 @@
+#!/usr/bin/nft -f
+flush ruleset;
+table inet filter {
+chain input {
+   		type filter hook input priority 0; policy drop;
+
+   		iifname "lo" accept;
+   		ct state { established, related } accept;
+   		ct state invalid drop;
+
+   		#allow ping
+   		ip protocol icmp accept;
+   	 	ip6 nexthdr icmpv6 accept
+
+   		# for swarm
+# see #https://docs.docker.com/engine/swarm/swarm-tutorial/#open-protocols-and-ports-between-the-hosts
+   		udp dport { 2377, 7946, 323 } accept;
+tcp dport { 9443, 3000, 222, 8000, 2377, 7946, 30002 } accept;
+
+   		#to allow incoming ports for services you are running
+tcp dport { 22 } limit rate 15/minute log prefix "new_ssh" flags all accept;
+    	}
+    
+chain output {
+   		 type filter hook output priority 0; policy accept;
+   		 oifname "<name of WAN interface>" jump output_filter; 	 
+    	}
+
+  	# use this chain to filter non-docker output
+chain output_filter {
+   		ct state invalid drop;
+   		ct state { established, related } accept;
+
+   		#allow ping
+   		ip protocol icmp accept;
+   	 	ip6 nexthdr icmpv6 accept;
+
+   	 	# Assumes your firewall group is called “fw_out”. Replace
+with a different
+   	 	# name as needed
+skuid <whatever user you are using> jump allowed_output;
+   	 	skuid wazuh jump allowed_output;
+
+   		# For swarm
+   		ip daddr { <Node1 IP, <Node2 IP>, <Node3 IP>, <Node4 IP>}
+ 	accept;
+
+   	 	# uncomment and add your DNS servers if you have resolution
+problems
+   	 	# necessary if using systemd-resolved
+   		ip daddr { 1.1.1.1, 8.8.8.8, <DNS server IP> } accept;
+   		log prefix "dropped_output" flags all;
+   		drop;
+    	}
+
+    	chain allowed_output {
+   	log prefix "allowed_output" flags all;
+   	# could filter more here
+   		udp dport { 53 } accept;
+		# For wazuh agents, add other outgoing ports if needed
+   		tcp dport { 53, 80, 443, 8080, 5601, 1514, 1515 } accept;
+   		drop;
+   	 
+   	}
+
+    	chain forward {
+   	 	# needs to be accept for docker to work
+   		type filter hook forward priority 0; policy accept;
+   	 }
+
