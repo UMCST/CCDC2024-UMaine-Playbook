@@ -1,0 +1,82 @@
+﻿1. Make DNS CNAME with service domain that routs to proxy host
+2. Listen on port 80 for domain name with no leading identifier
+3. Ensure that proxy pass is default route of webserver or whatever else, port is also available for specifying route
+
+
+server {
+        listen 80;
+        server_name rocketchat.ad.sweetcentral.org;
+
+
+        location / {
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header Host $host;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_pass https://sourpatch.sweetcentral.org;
+        }
+}
+
+
+Redirects all traffic to https version of request.
+Set default server rule for functionality you want to always happen independent of source. Reroute to https and then have config latching on https request, don’t have anything else listening on 80 because it’ll be overruled
+
+
+server {
+    listen 80 default_server;
+
+
+    server_name _;
+
+
+    return 301 https://$host$request_uri;
+}
+
+
+Site specific reroute
+server {
+    listen 80;
+
+
+    server_name foo.com;
+    return 301 https://foo.com$request_uri;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Listen for only ssl
+server {
+    listen 443 ssl default_server;
+    server_name foo.com;
+}
+
+
+server {
+    listen 443 ssl;
+    server_name bar.com;
+}
+
+
+# and so on...
+
+
+Quick host discovery nmap -PE -sn domain
+nmap -A domain
+
+
+Make file with list of ips and run -iL going forward for known host scan.
+Otherwise scan every ~20 minutes for new hosts/changes to ports
+        Verify that open ports are necessary for services
+
+
+–excludefile <file> to filter out known hosts and check for new ones
