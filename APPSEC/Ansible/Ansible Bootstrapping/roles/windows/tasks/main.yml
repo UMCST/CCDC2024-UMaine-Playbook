@@ -1,0 +1,11 @@
+# Add deploy user to Windows host
+#
+
+          - name: "add deployer user"
+            ansible.windows.win_user:
+                        groups: Users
+                        groups_action: add
+                        name: deployer
+                        password: "{{ deployer_pwdWIN }}"
+                        state: present
+                        password_never_expires: yes

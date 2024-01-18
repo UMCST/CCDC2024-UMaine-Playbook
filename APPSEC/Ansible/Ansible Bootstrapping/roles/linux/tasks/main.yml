@@ -1,0 +1,3 @@
+---
+- include: installpy.yml
+- include: addDeployUserLNX.yml

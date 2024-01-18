@@ -1,0 +1,21 @@
+- name: bootstrap linux clients
+  hosts: linux_hosts
+  gather_facts: False
+  # For remote user, change admin to some account with sudo privileges
+  remote_user: admin
+  vars_files:
+    - ./ansible_vars.yml
+
+  roles:
+    - linux
+
+- name: bootstrap windows clients
+  gather_facts: False
+  hosts: windows_hosts
+  # For remote user, change admin to some account with administrator privileges
+  remote_user: admin
+  vars_files:
+    - ./ansible_vars.yml
+
+  roles:
+    - windows

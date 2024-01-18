@@ -1,0 +1,42 @@
+# Create and configure remote user
+#
+
+- name: "add deployer user"
+  user:
+    name: deployer
+    password: "{{ deployer_pwdhash }}"
+    groups:
+      - sudo
+      - adm
+    append: yes
+    state: present
+    shell: /bin/bash
+    system: no
+    createhome: yes
+    home: /home/deployer
+  become: yes
+- name: "set deployer user no sudo password"
+  lineinfile:
+    path: /etc/sudoers.d/deployeruser
+    line: "deployer ALL=(ALL) NOPASSWD: ALL"
+    state: present
+    mode: "0440"
+    create: yes
+    validate: "visudo -cf %s"
+  become: yes
+- name: "create authorized key"
+  authorized_key:
+    user: deployer
+    state: present
+    manage_dir: yes
+    key: "{{ deployer_pubkey }}"
+  become: yes
+
+- name: "disable root login"
+  lineinfile:
+    dest: /etc/ssh/sshd_config
+    regexp: "^PermitRootLogin"
+    line: "PermitRootLogin no"
+    state: present
+    backup: yes
+  become: yes

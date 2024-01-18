@@ -1,0 +1,13 @@
+#
+
+- name: install python3
+  raw: apt update && apt install -y python3
+  become: yes
+
+- name: install pip3
+  raw: apt install -y python3-pip
+  become: yes
+
+- name: create symbolic link to python3.x
+  raw: ln -sfn /usr/bin/python3 /usr/bin/python
+  become: yes

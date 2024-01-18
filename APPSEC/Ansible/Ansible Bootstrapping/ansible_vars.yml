@@ -1,0 +1,5 @@
+deployer_pwdWIN: password
+
+deployer_pwdhash: somehash
+
+deployer_pubkey: some_pub_key
